@@ -7,6 +7,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.beam.sdk.coders.KvCoder;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -22,7 +24,9 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 	public PCollection<String> expand(PCollection<String> lines) {
 
 		final PCollectionView<List<String>> technicianList = lines.apply("skillGroupStream", JdbcIO
-				.<String, String>readAll().withDataSourceConfiguration(DataSourceConfigurationFactory.create())
+				.<String, String>readAll().withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
+				          .withUsername("wfm-dbuser_dv")
+				          .withPassword("wfm-dbuser_dv"))
 				.withQuery(
 						"SELECT DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID, DEMAND_STREAM_SUPPLY.EFFECTIVE_DT, STRING_AGG (SKILL_CD,'|' ORDER BY SKILL_CD) SKILLS FROM DEMAND_STREAM_SUPPLY_SKILL, DEMAND_STREAM_SUPPLY WHERE DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID = DEMAND_STREAM_SUPPLY.TEAM_MEMBER_ID AND DEMAND_STREAM_SUPPLY_SKILL.EFFECTIVE_DT = DEMAND_STREAM_SUPPLY.EFFECTIVE_DT AND DEMAND_STREAM_SUPPLY.DEMAND_STREAM_ID = ? AND DEMAND_STREAM_SUPPLY.EFFECTIVE_DT = ? AND TO_CHAR(DEMAND_STREAM_SUPPLY.EFFECTIVE_END_TS,'YYYY-MM-DD') = '9999-12-31' AND TO_CHAR(DEMAND_STREAM_SUPPLY_SKILL.EFFECTIVE_END_TS,'YYYY-MM-DD') = '9999-12-31' group by DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID")
 				.withParameterSetter(new JdbcIO.PreparedStatementSetter<String>() {
@@ -32,7 +36,9 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 						preparedStatement.setLong(1, Long.parseLong(value[0]));
 						preparedStatement.setDate(2, Date.valueOf(value[1]));
 					}
-				}).withRowMapper(new JdbcIO.RowMapper<String>() {
+				})
+				.withCoder(StringUtf8Coder.of())
+				.withRowMapper(new JdbcIO.RowMapper<String>() {
 					public String mapRow(ResultSet resultSet) throws Exception {
 						String techId = resultSet.getString("TEAM_MEMBER_ID");
 						String skillCds = resultSet.getString("SKILLS");
@@ -42,7 +48,9 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 				})).apply(View.asList());
 
 		PCollection<String> skillGroupStream = lines.apply("skillGroupStream", JdbcIO.<String, String>readAll()
-				.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
+				.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
+				          .withUsername("wfm-dbuser_dv")
+				          .withPassword("wfm-dbuser_dv"))
 				.withQuery(
 						"select DEMAND_STREAM_ID, SKILL_GROUP_STREAM.SKILL_GROUP_ID, SKILL_GROUP_STREAM_ID, SKILLS from SKILL_GROUP_STREAM, "
 								+ " (select skill_group_id, STRING_AGG (SKILL_GROUP_MAPPING.SKILL_TYPE_CD,'|' ORDER BY SKILL_GROUP_MAPPING.SKILL_TYPE_CD) SKILLS "
@@ -56,7 +64,9 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 						String[] value = element.split(",");
 						preparedStatement.setLong(1, Long.parseLong(value[0]));
 					}
-				}).withRowMapper(new JdbcIO.RowMapper<String>() {
+				})
+				.withCoder(StringUtf8Coder.of())
+				.withRowMapper(new JdbcIO.RowMapper<String>() {
 					public String mapRow(ResultSet resultSet) throws Exception {
 						Long demandStreamId = resultSet.getLong("DEMAND_STREAM_ID");
 						Long skillGroupId = resultSet.getLong("SKILL_GROUP_ID");

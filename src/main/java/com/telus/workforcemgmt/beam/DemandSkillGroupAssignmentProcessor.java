@@ -27,13 +27,17 @@ public class DemandSkillGroupAssignmentProcessor {
 		PipelineOptions options = PipelineOptionsFactory.create();
 		DataflowPipelineOptions dataflowOptions = options.as(DataflowPipelineOptions.class);
 		dataflowOptions.setRunner(DataflowRunner.class);
+		dataflowOptions.setRegion("us-east1");
 		dataflowOptions.setProject("cio-wfm-messaging-lab-f81efa");
+		dataflowOptions.setSubnetwork("regions/us-central1/subnetworks/wfm-subnet-11d74588");
 		dataflowOptions.setTempLocation("gs://dataflow_ngcm/temp");
 		Pipeline p = Pipeline.create(options);
 		PCollection<String> demandStreamIds =
 				p.apply("get demand stream id ", 
 						JdbcIO.<String>read()
-						.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
+						.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
+						          .withUsername("wfm-dbuser_dv")
+						          .withPassword("wfm-dbuser_dv"))
 						.withQuery("select distinct demand_stream_id from SKILL_GROUP_STREAM  WHERE CURRENT_TIMESTAMP between SKILL_GROUP_STREAM.EFFECTIVE_START_TS AND SKILL_GROUP_STREAM.EFFECTIVE_END_TS")
 						.withRowMapper(new JdbcIO.RowMapper<String>() {
 							public String mapRow(ResultSet resultSet) throws Exception {
@@ -42,6 +46,7 @@ public class DemandSkillGroupAssignmentProcessor {
 						})
 						.withCoder(StringUtf8Coder.of()))
 				.apply("add effective date", ParDo.of(new DoFn<String,String>() {
+					@ProcessElement
 					public void processElement(ProcessContext c) {
 						String demandStreamId = (String) c.element();
 						LocalDate now = LocalDate.now();
@@ -52,7 +57,9 @@ public class DemandSkillGroupAssignmentProcessor {
 					}}));
 		demandStreamIds.apply(new SkillGroupStreamTransform())
 		.apply(JdbcIO.<String>write()
-				.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
+				.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
+				          .withUsername("wfm-dbuser_dv")
+				          .withPassword("wfm-dbuser_dv"))
 				.withStatement("INSERT INTO DS_SKILL_GROUP_ASSIGNMENT "
 						+ "	(DS_SKILL_GROUP_ASSIGNMENT_ID, BATCH_JOB_INSTANCE_LOG_ID, EFFECTIVE_DT, TEAM_MEMBER_ID, DEMAND_STREAM_ID, "
 						+ "		SKILL_GROUP_STREAM_ID, SKILL_GROUP_ID, EFFECTIVE_START_TS, EFFECTIVE_END_TS, CREATE_USER_ID, "
@@ -72,6 +79,7 @@ public class DemandSkillGroupAssignmentProcessor {
 					}
 				})
 				);
+	    p.run().waitUntilFinish();
 	}
 
 }
