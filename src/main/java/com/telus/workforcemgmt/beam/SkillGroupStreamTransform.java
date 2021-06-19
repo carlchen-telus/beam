@@ -24,9 +24,7 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 	public PCollection<String> expand(PCollection<String> lines) {
 
 		final PCollectionView<List<String>> technicianList = lines.apply("skillGroupStream", JdbcIO
-				.<String, String>readAll().withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
-				          .withUsername("wfm-dbuser_dv")
-				          .withPassword("wfm-dbuser_dv"))
+				.<String, String>readAll().withDataSourceConfiguration(DataSourceConfigurationFactory.create())
 				.withQuery(
 						"SELECT DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID, DEMAND_STREAM_SUPPLY.EFFECTIVE_DT, STRING_AGG (SKILL_CD,'|' ORDER BY SKILL_CD) SKILLS FROM DEMAND_STREAM_SUPPLY_SKILL, DEMAND_STREAM_SUPPLY WHERE DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID = DEMAND_STREAM_SUPPLY.TEAM_MEMBER_ID AND DEMAND_STREAM_SUPPLY_SKILL.EFFECTIVE_DT = DEMAND_STREAM_SUPPLY.EFFECTIVE_DT AND DEMAND_STREAM_SUPPLY.DEMAND_STREAM_ID = ? AND DEMAND_STREAM_SUPPLY.EFFECTIVE_DT = ? AND TO_CHAR(DEMAND_STREAM_SUPPLY.EFFECTIVE_END_TS,'YYYY-MM-DD') = '9999-12-31' AND TO_CHAR(DEMAND_STREAM_SUPPLY_SKILL.EFFECTIVE_END_TS,'YYYY-MM-DD') = '9999-12-31' group by DEMAND_STREAM_SUPPLY_SKILL.TEAM_MEMBER_ID")
 				.withParameterSetter(new JdbcIO.PreparedStatementSetter<String>() {
@@ -48,9 +46,7 @@ public class SkillGroupStreamTransform extends PTransform<PCollection<String>, P
 				})).apply(View.asList());
 
 		PCollection<String> skillGroupStream = lines.apply("skillGroupStream", JdbcIO.<String, String>readAll()
-				.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
-				          .withUsername("wfm-dbuser_dv")
-				          .withPassword("wfm-dbuser_dv"))
+				.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
 				.withQuery(
 						"select DEMAND_STREAM_ID, SKILL_GROUP_STREAM.SKILL_GROUP_ID, SKILL_GROUP_STREAM_ID, SKILLS from SKILL_GROUP_STREAM, "
 								+ " (select skill_group_id, STRING_AGG (SKILL_GROUP_MAPPING.SKILL_TYPE_CD,'|' ORDER BY SKILL_GROUP_MAPPING.SKILL_TYPE_CD) SKILLS "

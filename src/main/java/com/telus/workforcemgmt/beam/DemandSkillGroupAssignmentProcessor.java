@@ -35,9 +35,7 @@ public class DemandSkillGroupAssignmentProcessor {
 		PCollection<String> demandStreamIds =
 				p.apply("get demand stream id ", 
 						JdbcIO.<String>read()
-						.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
-						          .withUsername("wfm-dbuser_dv")
-						          .withPassword("wfm-dbuser_dv"))
+						.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
 						.withQuery("select distinct demand_stream_id from SKILL_GROUP_STREAM  WHERE CURRENT_TIMESTAMP between SKILL_GROUP_STREAM.EFFECTIVE_START_TS AND SKILL_GROUP_STREAM.EFFECTIVE_END_TS")
 						.withRowMapper(new JdbcIO.RowMapper<String>() {
 							public String mapRow(ResultSet resultSet) throws Exception {
@@ -57,9 +55,7 @@ public class DemandSkillGroupAssignmentProcessor {
 					}}));
 		demandStreamIds.apply(new SkillGroupStreamTransform())
 		.apply(JdbcIO.<String>write()
-				.withDataSourceConfiguration(JdbcIO.DataSourceConfiguration.create("org.postgresql.ds.PGPoolingDataSource", "jdbc:postgresql://localhost:5432/ngcm")
-				          .withUsername("wfm-dbuser_dv")
-				          .withPassword("wfm-dbuser_dv"))
+				.withDataSourceConfiguration(DataSourceConfigurationFactory.create())
 				.withStatement("INSERT INTO DS_SKILL_GROUP_ASSIGNMENT "
 						+ "	(DS_SKILL_GROUP_ASSIGNMENT_ID, BATCH_JOB_INSTANCE_LOG_ID, EFFECTIVE_DT, TEAM_MEMBER_ID, DEMAND_STREAM_ID, "
 						+ "		SKILL_GROUP_STREAM_ID, SKILL_GROUP_ID, EFFECTIVE_START_TS, EFFECTIVE_END_TS, CREATE_USER_ID, "
