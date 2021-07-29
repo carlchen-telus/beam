@@ -18,7 +18,7 @@ go to Home > IAM & Admin > Identity & Organization > Define proper permissions.
 found "Define allowed external IPs for VM instances" is external IPs are disabled.
 
 https://cloud.google.com/dataflow/docs/guides/routes-firewall#firewall_rules_required_by
-As per above instruction, create a firewall rule:
+As per above instruction, create a firewall rule with tag "dataflow"
 
 gcloud compute firewall-rules create dataflow \
     --network wfm-vpc-11d74588 \
@@ -29,9 +29,9 @@ gcloud compute firewall-rules create dataflow \
     --priority 0 \
     --rules tcp:12345-12346
 	
-	
- https://cloud.google.com/dataflow/docs/guides/routes-firewall#enabling_network_tags
- Even if you do not use this parameter, Dataflow always adds the network tag dataflow to every worker VM it creates.
+ By default Dataflow always adds the network tag dataflow to every worker VM it creates (https://cloud.google.com/dataflow/docs/guides/routes-firewall#enabling_network_tags)
+ 
+ 
  
  
 
