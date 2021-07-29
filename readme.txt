@@ -17,8 +17,23 @@ Constraint constraints/compute.vmExternalIpAccess violated for project 587313965
 go to Home > IAM & Admin > Identity & Organization > Define proper permissions.
 found "Define allowed external IPs for VM instances" is external IPs are disabled.
 
-4.    
+https://cloud.google.com/dataflow/docs/guides/routes-firewall#firewall_rules_required_by
+As per above instruction, create a firewall rule:
 
+gcloud compute firewall-rules create dataflow \
+    --network wfm-vpc-11d74588 \
+    --action allow \
+    --direction ingress \
+    --target-tags dataflow \
+    --source-tags dataflow \
+    --priority 0 \
+    --rules tcp:12345-12346
+	
+	
+ https://cloud.google.com/dataflow/docs/guides/routes-firewall#enabling_network_tags
+ Even if you do not use this parameter, Dataflow always adds the network tag dataflow to every worker VM it creates.
+ 
+ 
 
  
  
