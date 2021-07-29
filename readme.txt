@@ -32,6 +32,8 @@ gcloud compute firewall-rules create dataflow \
  By default Dataflow always adds the network tag dataflow to every worker VM it creates (https://cloud.google.com/dataflow/docs/guides/routes-firewall#enabling_network_tags)
  
  
+ 4. run Cloud Sql Proxy
+ ./cloud_sql_proxy -instances=cio-wfm-messaging-lab-f81efa:us-central1:fwds-instance-11d74588=tcp:5432 &
  
  
 
